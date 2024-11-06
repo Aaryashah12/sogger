@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soccer Game</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        canvas {
+            border: 1px solid black;
+            background-color: #a9c0e0;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Player properties
+        const player = {
+            x: 100,
+            y: 300,
+            width: 30,
+            height: 30,
+            color: 'blue',
+            speed: 4, // Player speed
+            hasBall: true,
+            position: 'striker'
+        };
+
+        const ball = {
+            x: player.x + player.width / 2 - 10,
+            y: player.y + player.height / 2 - 10,
+            width: 20,
+            height: 20,
+            color: 'yellow',
+            speed: 0
+        };
+
+        // Opponent properties
+        const opponents = [
+            { x: 600, y: 250, width: 30, height: 30, color: 'red', speed: 1, hasBall: false, position: 'defender' },
+            { x: 600, y: 350, width: 30, height: 30, color: 'red', speed: 1, hasBall: false, position: 'defender' },
+            { x: 700, y: 300, width: 30, height: 30, color: 'red', speed: 1, hasBall: false, position: 'goalie' } // Goalie
+        ];
+
+        // Goal properties
+        const goals = [
+            { x: 0, y: 250, width: 10, height: 100, color: 'green' }, // Player's goal
+            { x: 790, y: 250, width: 10, height: 100, color: 'green' } // Opponent's goal
+        ];
+
+        // Game loop
+        function gameLoop() {
+            // Clear the canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw goals
+            goals.forEach(goal => {
+                ctx.fillStyle = goal.color;
+                ctx.fillRect(goal.x, goal.y, goal.width, goal.height);
+            });
+
+            // Draw player and ball
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            ctx.fillStyle = ball.color;
+            ctx.fillRect(ball.x, ball.y, ball.width, ball.height);
+
+            // Draw opponents
+            opponents.forEach(opponent => {
+                ctx.fillStyle = opponent.color;
+                ctx.fillRect(opponent.x, opponent.y, opponent.width, opponent.height);
+            });
+
+            // Move opponents
+            opponents.forEach(opponent => {
+                if (ball.x < opponent.x + opponent.width && ball.x + ball.width > opponent.x &&
+                    ball.y < opponent.y + opponent.height && ball.y + ball.height > opponent.y) {
+                    // If opponent touches the ball, they take control of it
+                    opponent.hasBall = true;
+                    player.hasBall = false;
+                }
+                if (opponent.hasBall) {
+                    opponent.x -= opponent.speed; // Move towards the goal
+                    if (opponent.x < 10) {
+                        // Reset opponent's position if they reach the goal
+                        opponent.x = 600;
+                        opponent.hasBall = false; // Reset their possession
+                    }
+                } else {
+                    // Move towards the ball
+                    if (ball.x < opponent.x) opponent.x -= opponent.speed;
+                    if (ball.x > opponent.x) opponent.x += opponent.speed;
+                    if (ball.y < opponent.y) opponent.y -= opponent.speed;
+                    if (ball.y > opponent.y) opponent.y += opponent.speed;
+                }
+            });
+
+            // Check for scoring
+            if (ball.x < goals[0].x + goals[0].width && ball.y + ball.height > goals[0].y && ball.y < goals[0].y + goals[0].height) {
+                alert("You scored!");
+                resetGame();
+            }
+            if (ball.x + ball.width > goals[1].x && ball.y + ball.height > goals[1].y && ball.y < goals[1].y + goals[1].height) {
+                alert("Game Over! Opponent scored!");
+                resetGame();
+            }
+
+            // Request the next frame
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Reset game state
+        function resetGame() {
+            player.x = 100;
+            player.y = 300;
+            ball.x = player.x + player.width / 2 - 10;
+            ball.y = player.y + player.height / 2 - 10;
+            opponents.forEach(opponent => {
+                opponent.x = 600;
+                opponent.y = Math.random() * (canvas.height - opponent.height);
+                opponent.hasBall = false;
+            });
+        }
+
+        // Handle player movement and kicking
+        window.addEventListener('keydown', (e) => {
+            if (e.key === ' ') { // Space key to kick the ball
+                const kickDistance = 50; // Distance to kick the ball
+                if (player.hasBall) {
+                    if (ball.x - player.x < kickDistance && player.x - ball.x < kickDistance && 
+                        ball.y - player.y < kickDistance && player.y - ball.y < kickDistance) {
+                        ball.x += (player.x < canvas.width / 2) ? 20 : -20; // Kick the ball to the right or left based on player position
+                        player.hasBall = false;
+                    }
+                }
+            }
+
+            if (player.hasBall) {
+                switch (e.key) {
+                    case 'ArrowUp':
+                        if (player.y > 0) {
+                            player.y -= player.speed;
+                            ball.y -= player.speed;
+                        }
+                        break;
+                    case 'ArrowDown':
+                        if (player.y + player.height < canvas.height) {
+                            player.y += player.speed;
+                            ball.y += player.speed;
+                        }
+                        break;
+                    case 'ArrowLeft':
+                        if (player.x > 0) {
+                            player.x -= player.speed;
+                            ball.x -= player.speed;
+                        }
+                        break;
+                    case 'ArrowRight':
+                        if (player.x + player.width < canvas.width) {
+                            player.x += player.speed;
+                            ball.x += player.speed;
+                        }
+                        break;
+                }
+            }
+        });
+
+        gameLoop();
+    </script>
+</body>
+</html>
+
